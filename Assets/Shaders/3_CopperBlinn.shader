@@ -1,6 +1,8 @@
-﻿Shader "Unity Shader/C2/2_WallDiffuse" {
+﻿Shader "Unity Shader/C3/3_CopperBlinn" {
 	Properties {
 		_MainColor ("color tint", COLOR) = (1.0, 1.0, 1.0, 1.0)  // 物体的主颜色
+		_SpecularColor ("specular", COLOR) = (1.0, 1.0, 1.0, 1.0)  // 物体的高光颜色
+		_Shiness ("shiness", RANGE(8.0, 64.0)) = 8.0
 		// 2D就是一个二维纹理变量。
 		// "white"是纹理的默认值, 表示一张纯白色图片
 		_MainTex ("main tex", 2D) = "white" {}
@@ -20,6 +22,8 @@
 			#include "Lighting.cginc"
 
 			fixed4 _MainColor;
+			fixed4 _SpecularColor;
+			float _Shiness;
 			// sampler2D是一个二维纹理采样器，采样概念我一会讲讲。
 			// sampler2D就是对应上面的2D属性。
 			sampler2D _MainTex;
@@ -65,7 +69,15 @@
 				// 内置变量_LightColor0为我们提供了光线的颜色
 				fixed3 diffuse = _LightColor0.rgb * albedo.rgb * lambert;
 
-				return fixed4(ambient + diffuse, albedo.a); // 输出物体主颜色
+				// blinn高光部分
+				float3 worldViewDir = normalize(UnityWorldSpaceViewDir(i.worldPos));
+				// 算出半程向量
+				float3 halfDir = normalize(worldLightDir + worldViewDir);
+				// 用反射向量和视线向量的夹角模拟高光的影响程度
+				float spec = pow(saturate(dot(worldNormal, halfDir)), _Shiness);
+				fixed3 specular = _LightColor0.rgb * _SpecularColor.rgb * spec;
+
+				return fixed4(ambient + diffuse + specular, albedo.a); // 输出物体主颜色
 			}
 
 			ENDCG
